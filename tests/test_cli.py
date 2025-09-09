@@ -263,7 +263,9 @@ class TestBaseConverterCLI:
     @patch("sys.stdout", new_callable=StringIO)
     def test_run_validation(self, mock_stdout):
         """Test validation option via run method."""
-        exit_code = self.cli.run(["255", "-f", "10", "-t", "16", "--validate"])
+        exit_code = self.cli.run(
+            ["255", "-f", "10", "-t", "16", "--validate", "--info"]
+        )
         assert exit_code == 0
 
         output = mock_stdout.getvalue()
@@ -280,12 +282,25 @@ class TestBaseConverterCLI:
             output = mock_stdout.getvalue().strip()
             assert output == "FF"  # Should only contain the result
 
-    @patch("builtins.open", new_callable=mock_open, read_data="10\n20\n")
     @patch("os.path.exists", return_value=True)
-    def test_run_batch_mode(self, mock_exists, mock_file):
+    def test_run_batch_mode(self, mock_exists):
         """Test batch mode via run method."""
-        exit_code = self.cli.run(["--batch", "test.txt", "-f", "10", "-t", "2"])
-        assert exit_code == 0
+        # Create a more specific mock that only affects our file operations
+        original_open = (
+            __builtins__["open"]
+            if isinstance(__builtins__, dict)
+            else __builtins__.open
+        )
+
+        def side_effect(*args, **kwargs):
+            if args and "test.txt" in str(args[0]):
+                return mock_open(read_data="10\n20\n")(*args, **kwargs)
+            else:
+                return original_open(*args, **kwargs)
+
+        with patch("builtins.open", side_effect=side_effect):
+            exit_code = self.cli.run(["--batch", "test.txt", "-f", "10", "-t", "2"])
+            assert exit_code == 0
 
     def test_run_no_arguments(self):
         """Test run with no arguments (should show help)."""
@@ -375,16 +390,28 @@ class TestCLIIntegration:
                 exit_code = cli.run(args)
                 assert exit_code == expected_exit_code
 
-    @patch("builtins.open", new_callable=mock_open, read_data="123\n456\n789\nABC\n")
     @patch("os.path.exists", return_value=True)
-    def test_batch_processing_integration(self, mock_exists, mock_file):
+    def test_batch_processing_integration(self, mock_exists):
         """Test batch processing integration."""
         cli = BaseConverterCLI()
 
         # Test batch conversion from decimal to various bases
-        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
-            exit_code = cli.run(["--batch", "test.txt", "-f", "10", "-t", "16"])
-            assert exit_code == 0
+        original_open = (
+            __builtins__["open"]
+            if isinstance(__builtins__, dict)
+            else __builtins__.open
+        )
+
+        def side_effect(*args, **kwargs):
+            if args and "test.txt" in str(args[0]):
+                return mock_open(read_data="123\n456\n789\nABC\n")(*args, **kwargs)
+            else:
+                return original_open(*args, **kwargs)
+
+        with patch("builtins.open", side_effect=side_effect):
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                exit_code = cli.run(["--batch", "test.txt", "-f", "10", "-t", "16"])
+                assert exit_code == 0
 
             output = mock_stdout.getvalue()
             # Should process decimal numbers and convert to hex
@@ -441,7 +468,7 @@ class TestCLIIntegration:
                 exit_code = cli.run(["--batch", "C:\\Windows\\style\\path.txt"])
                 assert exit_code is not None  # Should complete without crashing
 
-    @patch("sys.stdin", StringIO("123 10 2\nFF 16 10\nquit\n"))
+    @patch("sys.stdin", new_callable=lambda: StringIO("123 10 2\nFF 16 10\nquit\n"))
     @patch("sys.stdout", new_callable=StringIO)
     def test_interactive_mode_simulation(self, mock_stdout, mock_stdin):
         """Test interactive mode simulation."""

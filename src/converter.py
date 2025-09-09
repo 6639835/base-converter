@@ -311,14 +311,24 @@ class BaseConverter:
         clean_number = clean_number.lstrip("-")
         unique_digits = set(clean_number.upper())
 
+        # For ambiguous cases, use specific heuristics
         if unique_digits.issubset(set("01")):
-            return 2
+            return 2  # Pure binary
         elif unique_digits.issubset(set("01234567")):
-            return 8
+            # If it uses all octal digits (0-7) or has leading zero pattern, suggest octal
+            if (
+                len(unique_digits) >= 4
+                or clean_number.startswith("0")
+                and len(clean_number) > 1
+            ):
+                return 8
+            # For simple cases like "123", prefer decimal
+            else:
+                return 10
         elif unique_digits.issubset(set("0123456789")):
-            return 10
+            return 10  # Decimal
         elif unique_digits.issubset(set("0123456789ABCDEF")):
-            return 16
+            return 16  # Hexadecimal
 
         return None
 

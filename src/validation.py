@@ -185,6 +185,11 @@ class InputValidator:
         sanitized = re.sub(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", "", text)
         sanitized = re.sub(r"\s+", " ", sanitized).strip()
 
+        # For number inputs, keep only valid number characters
+        # This includes digits, letters (for higher bases), minus sign, and common prefixes
+        sanitized = re.sub(r"[^-+0-9A-Za-z\s]", "", sanitized)
+        sanitized = sanitized.strip()
+
         return sanitized
 
     def validate_batch_input(self, numbers: List[str], base: int) -> List[str]:
@@ -260,17 +265,29 @@ class InputValidator:
 
         suggested_base = max_digit_value + 1
 
-        # Common base suggestions
-        if suggested_base <= 2:
-            return 2
-        elif suggested_base <= 8:
-            return 8 if any(d in "234567" for d in unique_digits) else 10
+        # Common base suggestions with heuristics
+        if suggested_base <= 2 and unique_digits.issubset(set("01")):
+            return 2  # Pure binary
+        elif suggested_base <= 8 and unique_digits.issubset(set("01234567")):
+            # If it uses many octal digits or has leading zero pattern, suggest octal
+            if len(unique_digits) >= 4 or (
+                number_part.startswith("0") and len(number_part) > 1
+            ):
+                return 8
+            # For simple cases like "123", prefer decimal
+            else:
+                return 10
         elif suggested_base <= 10:
-            return 10
+            return 10  # Default to decimal for most cases
         elif suggested_base <= 16:
             return 16
         else:
-            return suggested_base
+            # For bases above 16, consider common cases
+            # Single letters should default to hex if they're close to hex range
+            if len(unique_digits) == 1 and suggested_base <= 20:
+                return 16  # Single letters like G, H, I etc. suggest hex context
+            # Otherwise return the calculated base but cap at reasonable limits
+            return min(suggested_base, 36)
 
     def format_error_message(self, error: Exception, context: str = "") -> str:
         """
