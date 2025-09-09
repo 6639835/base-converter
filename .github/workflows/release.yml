@@ -68,10 +68,176 @@ jobs:
           echo "release_created=false" >> $GITHUB_OUTPUT
         fi
 
+  # Job for manual releases (doesn't need create-release)
+  build-and-upload-release:
+    runs-on: ${{ matrix.os }}
+    if: github.event_name == 'release'
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+            asset_name: base-converter-linux-x64.tar.gz
+          - os: windows-latest
+            platform: windows
+            arch: x64
+            asset_name: base-converter-windows-x64.zip
+          - os: macos-latest
+            platform: macos
+            arch: x64
+            asset_name: base-converter-macos-x64.tar.gz
+          - os: macos-13
+            platform: macos
+            arch: arm64
+            asset_name: base-converter-macos-arm64.tar.gz
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller pytest pytest-cov
+        pip install -e .
+        
+    - name: Install system dependencies (Linux)
+      if: matrix.platform == 'linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-tk
+        
+    - name: Build executable
+      run: |
+        python build.py
+        
+    - name: Run comprehensive tests
+      run: |
+        python -m pytest tests/ -v
+        
+    - name: Test executable functionality
+      shell: bash
+      run: |
+        if [ "${{ matrix.platform }}" = "windows" ]; then
+          exe_path=$(find dist/ -name "base-converter-windows-*.exe" -type f | head -1)
+          if [ -z "$exe_path" ] || [ ! -f "$exe_path" ]; then
+            echo "❌ Windows executable not found!"
+            ls -la dist/
+            exit 1
+          fi
+          echo "✅ Testing Windows executable: $exe_path"
+          "$exe_path" --list-bases
+          "$exe_path" 1010 -f 2 -t 10
+          "$exe_path" FF -f 16 -t 2
+        else
+          # Find the actual executable created by build.py (uses platform.system() names)
+          if [ "${{ matrix.platform }}" = "macos" ]; then
+            exe_path=$(find dist/ -name "base-converter-darwin-*" -type f | head -1)
+          else
+            exe_path=$(find dist/ -name "base-converter-linux-*" -type f | head -1)
+          fi
+          
+          if [ -z "$exe_path" ] || [ ! -f "$exe_path" ]; then
+            echo "❌ Executable not found!"
+            ls -la dist/
+            exit 1
+          fi
+          
+          chmod +x "$exe_path"
+          echo "✅ Testing executable: $exe_path"
+          "$exe_path" --list-bases
+          "$exe_path" 1010 -f 2 -t 10
+          "$exe_path" FF -f 16 -t 2
+        fi
+        
+    - name: Create release package
+      shell: bash
+      run: |
+        mkdir -p release-package
+        
+        # Find and copy executable with correct naming
+        if [ "${{ matrix.platform }}" = "windows" ]; then
+          exe_file=$(find dist/ -name "base-converter-*.exe" -type f | head -1)
+        elif [ "${{ matrix.platform }}" = "macos" ]; then
+          exe_file=$(find dist/ -name "base-converter-darwin-*" -type f | head -1)
+        else
+          exe_file=$(find dist/ -name "base-converter-linux-*" -type f | head -1)
+        fi
+        
+        if [ -f "$exe_file" ]; then
+          cp "$exe_file" release-package/
+          echo "✅ Copied executable: $exe_file"
+        else
+          echo "❌ No executable found to copy!"
+          ls -la dist/
+          exit 1
+        fi
+        
+        # Copy installer scripts
+        if [ "${{ matrix.platform }}" = "windows" ]; then
+          cp install-windows.bat release-package/ 2>/dev/null || echo "No Windows installer found"
+        elif [ "${{ matrix.platform }}" = "macos" ]; then
+          cp install-macos.sh release-package/ 2>/dev/null || echo "No macOS installer found"
+        else
+          cp install-linux.sh release-package/ 2>/dev/null || echo "No Linux installer found"
+        fi
+        
+        # Copy documentation
+        cp PACKAGE_INFO.txt release-package/ 2>/dev/null || echo "No package info found"
+        
+        # Create README for the package
+        cat > release-package/README.txt << 'EOF'
+        Base Converter v${{ github.event.release.tag_name }}
+        ================================================================
+        
+        Thank you for downloading Base Converter!
+        
+        QUICK START:
+        1. Run the installer script (recommended), or
+        2. Copy the executable to a directory in your PATH
+        
+        USAGE:
+        - GUI mode: base-converter --gui
+        - CLI mode: base-converter 1010 -f 2 -t 10
+        - Help: base-converter --help
+        
+        FEATURES:
+        - Convert between bases 2-36
+        - Graphical and command-line interfaces
+        - Arithmetic operations in different bases  
+        - Batch processing from files
+        - Input validation and error handling
+        
+        For detailed documentation and source code:
+        https://github.com/6639835/base-converter
+        
+        Report issues at:
+        https://github.com/6639835/base-converter/issues
+        EOF
+        
+        # Create archive
+        if [ "${{ matrix.platform }}" = "windows" ]; then
+          cd release-package
+          7z a ../${{ matrix.asset_name }} *
+        else
+          tar -czf ${{ matrix.asset_name }} -C release-package .
+        fi
+        
+    - name: Upload Release Asset
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release upload ${{ github.event.release.tag_name }} ${{ matrix.asset_name }} --clobber
+
+  # Job for workflow_dispatch (needs create-release)
   build-and-upload:
     runs-on: ${{ matrix.os }}
     needs: [create-release]
-    if: always() && (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && needs.create-release.result == 'success'))
+    if: github.event_name == 'workflow_dispatch' && needs.create-release.result == 'success'
     strategy:
       matrix:
         include:
@@ -115,6 +281,124 @@ jobs:
     - name: Build executable
       run: |
         python build.py
+        
+    - name: Run comprehensive tests
+      run: |
+        python -m pytest tests/ -v
+        
+    - name: Test executable functionality
+      shell: bash
+      run: |
+        if [ "${{ matrix.platform }}" = "windows" ]; then
+          exe_path=$(find dist/ -name "base-converter-windows-*.exe" -type f | head -1)
+          if [ -z "$exe_path" ] || [ ! -f "$exe_path" ]; then
+            echo "❌ Windows executable not found!"
+            ls -la dist/
+            exit 1
+          fi
+          echo "✅ Testing Windows executable: $exe_path"
+          "$exe_path" --list-bases
+          "$exe_path" 1010 -f 2 -t 10
+          "$exe_path" FF -f 16 -t 2
+        else
+          # Find the actual executable created by build.py (uses platform.system() names)
+          if [ "${{ matrix.platform }}" = "macos" ]; then
+            exe_path=$(find dist/ -name "base-converter-darwin-*" -type f | head -1)
+          else
+            exe_path=$(find dist/ -name "base-converter-linux-*" -type f | head -1)
+          fi
+          
+          if [ -z "$exe_path" ] || [ ! -f "$exe_path" ]; then
+            echo "❌ Executable not found!"
+            ls -la dist/
+            exit 1
+          fi
+          
+          chmod +x "$exe_path"
+          echo "✅ Testing executable: $exe_path"
+          "$exe_path" --list-bases
+          "$exe_path" 1010 -f 2 -t 10
+          "$exe_path" FF -f 16 -t 2
+        fi
+        
+    - name: Create release package
+      shell: bash
+      run: |
+        mkdir -p release-package
+        
+        # Find and copy executable with correct naming
+        if [ "${{ matrix.platform }}" = "windows" ]; then
+          exe_file=$(find dist/ -name "base-converter-*.exe" -type f | head -1)
+        elif [ "${{ matrix.platform }}" = "macos" ]; then
+          exe_file=$(find dist/ -name "base-converter-darwin-*" -type f | head -1)
+        else
+          exe_file=$(find dist/ -name "base-converter-linux-*" -type f | head -1)
+        fi
+        
+        if [ -f "$exe_file" ]; then
+          cp "$exe_file" release-package/
+          echo "✅ Copied executable: $exe_file"
+        else
+          echo "❌ No executable found to copy!"
+          ls -la dist/
+          exit 1
+        fi
+        
+        # Copy installer scripts
+        if [ "${{ matrix.platform }}" = "windows" ]; then
+          cp install-windows.bat release-package/ 2>/dev/null || echo "No Windows installer found"
+        elif [ "${{ matrix.platform }}" = "macos" ]; then
+          cp install-macos.sh release-package/ 2>/dev/null || echo "No macOS installer found"
+        else
+          cp install-linux.sh release-package/ 2>/dev/null || echo "No Linux installer found"
+        fi
+        
+        # Copy documentation
+        cp PACKAGE_INFO.txt release-package/ 2>/dev/null || echo "No package info found"
+        
+        # Create README for the package
+        cat > release-package/README.txt << 'EOF'
+        Base Converter v${{ github.event.inputs.version }}
+        ================================================================
+        
+        Thank you for downloading Base Converter!
+        
+        QUICK START:
+        1. Run the installer script (recommended), or
+        2. Copy the executable to a directory in your PATH
+        
+        USAGE:
+        - GUI mode: base-converter --gui
+        - CLI mode: base-converter 1010 -f 2 -t 10
+        - Help: base-converter --help
+        
+        FEATURES:
+        - Convert between bases 2-36
+        - Graphical and command-line interfaces
+        - Arithmetic operations in different bases  
+        - Batch processing from files
+        - Input validation and error handling
+        
+        For detailed documentation and source code:
+        https://github.com/6639835/base-converter
+        
+        Report issues at:
+        https://github.com/6639835/base-converter/issues
+        EOF
+        
+        # Create archive
+        if [ "${{ matrix.platform }}" = "windows" ]; then
+          cd release-package
+          7z a ../${{ matrix.asset_name }} *
+        else
+          tar -czf ${{ matrix.asset_name }} -C release-package .
+        fi
+        
+    - name: Upload Release Asset
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release upload ${{ github.event.inputs.version }} ${{ matrix.asset_name }} --clobber
         
     - name: Run comprehensive tests
       run: |
@@ -238,9 +522,9 @@ jobs:
           --clobber
         
   update-package-managers:
-    needs: [build-and-upload]
+    needs: [build-and-upload-release, build-and-upload]
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
+    if: always() && github.event_name == 'release' && (needs.build-and-upload-release.result == 'success' || needs.build-and-upload.result == 'success')
     
     steps:
     - uses: actions/checkout@v4
@@ -274,9 +558,9 @@ jobs:
         branch: update-version-${{ github.event.release.tag_name }}
         
   upload-to-pypi:
-    needs: [build-and-upload]
+    needs: [build-and-upload-release, build-and-upload]
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
+    if: always() && github.event_name == 'release' && (needs.build-and-upload-release.result == 'success' || needs.build-and-upload.result == 'success')
     
     steps:
     - uses: actions/checkout@v4
