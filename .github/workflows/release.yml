@@ -169,6 +169,39 @@ jobs:
           tar -czf ${{ matrix.asset_name }} -C release-package .
         fi
         
+    - name: Create GitHub Release (if manual trigger)
+      if: github.event_name == 'workflow_dispatch' && matrix.platform == 'linux'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Create release only if it doesn't exist
+        if ! gh release view "${{ github.event.inputs.version }}" >/dev/null 2>&1; then
+          gh release create "${{ github.event.inputs.version }}" \
+            --title "Base Converter v${{ github.event.inputs.version }}" \
+            --notes "Release v${{ github.event.inputs.version }} of Base Converter
+            
+            ## Features
+            - Convert between bases 2-36
+            - Command-line and graphical interfaces  
+            - Arithmetic operations in different bases
+            - Batch processing capabilities
+            - Input validation and error handling
+            
+            ## Installation
+            Download the appropriate package for your platform and follow the installation instructions.
+            
+            ## PyPI Installation
+            \`\`\`bash
+            pip install comprehensive-base-converter
+            \`\`\`
+            
+            For more information, see the [README](https://github.com/6639835/base-converter/blob/main/README.md)." \
+            --draft=false
+          echo "✅ Created GitHub release: ${{ github.event.inputs.version }}"
+        else
+          echo "✅ Release ${{ github.event.inputs.version }} already exists"
+        fi
+        
     - name: Upload Release Asset
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
