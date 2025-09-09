@@ -3,7 +3,7 @@ Input validation and error handling utilities for the Base Converter.
 """
 
 import re
-from typing import List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 
 class ValidationError(Exception):
@@ -308,7 +308,7 @@ class InputValidator:
         else:
             return f"{error_type}: {error_msg}"
 
-    def get_validation_summary(self, number: str, base: int) -> dict:
+    def get_validation_summary(self, number: str, base: int) -> Dict[str, Any]:
         """
         Get a summary of validation information for a number and base.
 
@@ -319,7 +319,7 @@ class InputValidator:
         Returns:
             dict: Validation summary
         """
-        summary = {
+        summary: Dict[str, Any] = {
             "original_input": number,
             "is_valid": False,
             "cleaned_number": "",
@@ -341,7 +341,7 @@ class InputValidator:
             summary["is_valid"] = True
 
         except ValidationError as e:
-            summary["errors"].append(str(e))
+            cast(List[str], summary["errors"]).append(str(e))
 
         # Get base suggestion regardless of validation result
         try:
