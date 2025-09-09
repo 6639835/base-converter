@@ -2,11 +2,13 @@
 Pytest configuration and shared fixtures.
 """
 
-import pytest
-import sys
 import os
+import sys
 
-# Add src directory to Python path for all tests
+import pytest
+
+# Add project root and src to Python path for all tests
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 

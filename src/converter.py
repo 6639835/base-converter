@@ -3,9 +3,9 @@ Core base conversion functions for the Base Converter utility.
 Supports conversion between various number bases including binary, octal, decimal, hexadecimal, and custom bases.
 """
 
-import re
 import math
-from typing import Union, Dict, List, Optional
+import re
+from typing import Dict, List, Optional, Union
 
 
 class BaseConverter:

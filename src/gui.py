@@ -4,13 +4,14 @@ Graphical User Interface for the Base Converter utility.
 Built with tkinter for cross-platform compatibility.
 """
 
-import tkinter as tk
-from tkinter import ttk, messagebox, filedialog, scrolledtext
-import sys
 import os
+import sys
+import tkinter as tk
+from tkinter import filedialog, messagebox, scrolledtext, ttk
 from typing import Dict, List, Optional
-from .converter import BaseConverter
-from .validation import InputValidator, ValidationError
+
+from converter import BaseConverter
+from validation import InputValidator, ValidationError
 
 
 class BaseConverterGUI:

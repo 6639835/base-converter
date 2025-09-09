@@ -52,7 +52,7 @@ if sys.platform.startswith('win'):
 
 a = Analysis(
     ['src/main.py'],
-    pathex=[],
+    pathex=['src'],
     binaries=[],
     datas=[
         ('src/*.py', 'src'),
@@ -126,7 +126,6 @@ def build_executable():
     cmd = [
         sys.executable, '-m', 'PyInstaller',
         '--clean',
-        '--onefile',
         'base-converter.spec'
     ]
     

@@ -3,7 +3,7 @@ Input validation and error handling utilities for the Base Converter.
 """
 
 import re
-from typing import Union, Tuple, Optional, List
+from typing import List, Optional, Tuple, Union
 
 
 class ValidationError(Exception):

@@ -2,16 +2,18 @@
 Tests for the command-line interface functionality.
 """
 
-import pytest
-import sys
 import os
+import sys
 from io import StringIO
-from unittest.mock import patch, mock_open
+from unittest.mock import mock_open, patch
 
-# Add src directory to path for imports
+import pytest
+
+# Add project root and src to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from cli import BaseConverterCLI
+from src.cli import BaseConverterCLI
 
 
 class TestBaseConverterCLI:
@@ -327,7 +329,7 @@ class TestBaseConverterCLI:
 
     def test_main_function(self):
         """Test the main entry point function."""
-        from cli import main
+        from src.cli import main
 
         # Test that main can be called (though it will sys.exit)
         with patch("sys.argv", ["base-converter", "--list-bases"]):

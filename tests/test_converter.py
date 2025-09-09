@@ -2,21 +2,18 @@
 Tests for the core base conversion functionality.
 """
 
-import pytest
-import sys
 import os
+import sys
 
-# Add src directory to path for imports
+import pytest
+
+# Add project root and src to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from converter import (
-    BaseConverter,
-    quick_binary_to_decimal,
-    quick_decimal_to_binary,
-    quick_hex_to_decimal,
-    quick_decimal_to_hex,
-    batch_convert,
-)
+from src.converter import (BaseConverter, batch_convert,
+                           quick_binary_to_decimal, quick_decimal_to_binary,
+                           quick_decimal_to_hex, quick_hex_to_decimal)
 
 
 class TestBaseConverter:

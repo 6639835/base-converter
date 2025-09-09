@@ -2,20 +2,18 @@
 Tests for input validation functionality.
 """
 
-import pytest
-import sys
 import os
+import sys
 
-# Add src directory to path for imports
+import pytest
+
+# Add project root and src to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from validation import (
-    InputValidator,
-    ValidationError,
-    is_valid_base,
-    is_valid_number_for_base,
-    clean_number_input,
-)
+from src.validation import (InputValidator, ValidationError,
+                            clean_number_input, is_valid_base,
+                            is_valid_number_for_base)
 
 
 class TestInputValidator:
@@ -376,7 +374,7 @@ class TestValidationIntegration:
             assert validated is not None
 
             # Should work with actual converter
-            from converter import BaseConverter
+            from src.converter import BaseConverter
 
             converter = BaseConverter()
             decimal_value = converter.base_to_decimal(validated, base)

@@ -5,11 +5,12 @@ Provides comprehensive base conversion functionality via command line.
 """
 
 import argparse
-import sys
 import os
-from typing import List, Dict, Optional
-from .converter import BaseConverter, batch_convert
-from .validation import InputValidator, ValidationError
+import sys
+from typing import Dict, List, Optional
+
+from converter import BaseConverter, batch_convert
+from validation import InputValidator, ValidationError
 
 
 class BaseConverterCLI:

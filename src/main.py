@@ -4,8 +4,8 @@ Main entry point for the Base Converter application.
 Can launch either GUI or CLI based on arguments.
 """
 
-import sys
 import argparse
+import sys
 from typing import List, Optional
 
 
@@ -111,7 +111,9 @@ def main(args: Optional[List[str]] = None):
         if launcher_args.gui:
             # Launch GUI
             try:
-                from .gui import main as gui_main
+                import gui
+
+                gui_main = gui.main
 
                 gui_main()
                 return 0
@@ -126,7 +128,9 @@ def main(args: Optional[List[str]] = None):
         elif launcher_args.cli:
             # Launch CLI with remaining arguments
             try:
-                from .cli import main as cli_main
+                import cli
+
+                cli_main = cli.main
 
                 sys.argv = ["base-converter"] + launcher_args.remaining
                 return cli_main()
