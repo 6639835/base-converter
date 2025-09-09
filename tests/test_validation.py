@@ -5,19 +5,15 @@ Tests for input validation functionality.
 import os
 import sys
 
-import pytest
-
 # Add project root and src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from src.validation import (
-    InputValidator,
-    ValidationError,
-    clean_number_input,
-    is_valid_base,
-    is_valid_number_for_base,
-)
+import pytest
+
+from src.validation import (InputValidator, ValidationError,
+                            clean_number_input, is_valid_base,
+                            is_valid_number_for_base)
 
 
 class TestInputValidator:
