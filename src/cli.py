@@ -9,8 +9,8 @@ import os
 import sys
 from typing import Dict, List, Optional
 
-from .converter import BaseConverter, batch_convert
-from .validation import InputValidator, ValidationError
+from src.converter import BaseConverter, batch_convert
+from src.validation import InputValidator, ValidationError
 
 
 class BaseConverterCLI:

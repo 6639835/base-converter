@@ -10,8 +10,8 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 from typing import Dict, List, Optional
 
-from .converter import BaseConverter
-from .validation import InputValidator, ValidationError
+from src.converter import BaseConverter
+from src.validation import InputValidator, ValidationError
 
 
 class BaseConverterGUI:
