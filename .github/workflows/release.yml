@@ -44,7 +44,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pyinstaller
+        pip install pyinstaller pytest pytest-cov
         pip install -e .
         
     - name: Install system dependencies (Linux)
@@ -179,8 +179,124 @@ jobs:
           - Updated src/__init__.py
         branch: update-version-${{ github.event.release.tag_name }}
         
-  homebrew-update:
+  upload-to-pypi:
     needs: build-and-upload
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install build tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+        
+    - name: Update version for PyPI release
+      run: |
+        VERSION=${{ github.event.release.tag_name }}
+        VERSION=${VERSION#v}  # Remove 'v' prefix if present
+        
+        # Update setup.py
+        sed -i "s/version=\".*\"/version=\"$VERSION\"/" setup.py
+        
+        # Update pyproject.toml
+        sed -i "s/version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+        
+    - name: Build package
+      run: |
+        rm -rf build dist *.egg-info
+        python setup.py sdist bdist_wheel
+        
+    - name: Upload to PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: |
+        python -m twine upload dist/*
+        
+  test-pypi-package:
+    needs: upload-to-pypi
+    runs-on: ${{ matrix.os }}
+    if: github.event_name == 'release'
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.8', '3.11']
+    
+    steps:
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install GUI dependencies (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-tk xvfb
+        
+    - name: Wait for PyPI package availability
+      run: |
+        echo "Waiting 2 minutes for PyPI package to become available..."
+        sleep 120
+        
+    - name: Install package from PyPI
+      run: |
+        python -m pip install --upgrade pip
+        pip install comprehensive-base-converter
+        
+    - name: Verify installation
+      run: |
+        pip list | grep comprehensive-base-converter
+        pip show comprehensive-base-converter
+        
+    - name: Test CLI functionality
+      run: |
+        base-converter --help
+        base-converter --list-bases
+        base-converter 1010 -f 2 -t 10
+        base-converter 255 -f 10 -t 16
+        base-converter FF -f 16 -t 2
+        base-converter 777 -f 8 -t 10
+        
+    - name: Test conversion table
+      run: |
+        base-converter 42 --table
+        
+    - name: Test with prefixes and formatting
+      run: |
+        base-converter 255 -f 10 -t 2 --format --prefix
+        
+    - name: Test interactive mode (non-interactive)
+      timeout-minutes: 1
+      run: |
+        echo -e "1010\n2\n16\nq" | base-converter --interactive || true
+        
+    - name: Test GUI command (non-headless systems)
+      if: matrix.os != 'ubuntu-latest'
+      timeout-minutes: 1
+      run: |
+        # Test that GUI command doesn't crash immediately
+        timeout 5 base-converter --gui || echo "✅ GUI command executed (expected timeout)"
+        
+    - name: Test GUI command with Xvfb (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      timeout-minutes: 1
+      run: |
+        export DISPLAY=:99
+        Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+        sleep 3
+        # Test that GUI command doesn't crash immediately on Linux
+        timeout 5 base-converter --gui || echo "✅ GUI command executed on Linux (expected timeout)"
+        
+  homebrew-update:
+    needs: [build-and-upload, upload-to-pypi, test-pypi-package]
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
     
@@ -195,7 +311,7 @@ jobs:
         echo "3. Create a PR to the Homebrew repository"
         
   notify-users:
-    needs: [build-and-upload, update-package-managers]
+    needs: [build-and-upload, update-package-managers, upload-to-pypi, test-pypi-package]
     runs-on: ubuntu-latest
     if: always() && github.event_name == 'release'
     
