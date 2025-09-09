@@ -111,7 +111,7 @@ def main(args: Optional[List[str]] = None):
         if launcher_args.gui:
             # Launch GUI
             try:
-                import gui
+                from . import gui
 
                 gui_main = gui.main
 
@@ -128,7 +128,7 @@ def main(args: Optional[List[str]] = None):
         elif launcher_args.cli:
             # Launch CLI with remaining arguments
             try:
-                import cli
+                from . import cli
 
                 cli_main = cli.main
 
