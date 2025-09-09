@@ -65,13 +65,32 @@ jobs:
       shell: bash
       run: |
         if [ "${{ matrix.platform }}" = "windows" ]; then
-          exe_path="dist/base-converter-windows-x64.exe"
+          exe_path=$(find dist/ -name "base-converter-windows-*.exe" -type f | head -1)
+          if [ -z "$exe_path" ] || [ ! -f "$exe_path" ]; then
+            echo "❌ Windows executable not found!"
+            ls -la dist/
+            exit 1
+          fi
+          echo "✅ Testing Windows executable: $exe_path"
           "$exe_path" --list-bases
           "$exe_path" 1010 -f 2 -t 10
           "$exe_path" FF -f 16 -t 2
         else
-          exe_path="dist/base-converter-${{ matrix.platform }}-${{ matrix.arch }}"
+          # Find the actual executable created by build.py (uses platform.system() names)
+          if [ "${{ matrix.platform }}" = "macos" ]; then
+            exe_path=$(find dist/ -name "base-converter-darwin-*" -type f | head -1)
+          else
+            exe_path=$(find dist/ -name "base-converter-linux-*" -type f | head -1)
+          fi
+          
+          if [ -z "$exe_path" ] || [ ! -f "$exe_path" ]; then
+            echo "❌ Executable not found!"
+            ls -la dist/
+            exit 1
+          fi
+          
           chmod +x "$exe_path"
+          echo "✅ Testing executable: $exe_path"
           "$exe_path" --list-bases
           "$exe_path" 1010 -f 2 -t 10
           "$exe_path" FF -f 16 -t 2
@@ -82,8 +101,23 @@ jobs:
       run: |
         mkdir -p release-package
         
-        # Copy executable
-        cp dist/base-converter-* release-package/
+        # Find and copy executable with correct naming
+        if [ "${{ matrix.platform }}" = "windows" ]; then
+          exe_file=$(find dist/ -name "base-converter-*.exe" -type f | head -1)
+        elif [ "${{ matrix.platform }}" = "macos" ]; then
+          exe_file=$(find dist/ -name "base-converter-darwin-*" -type f | head -1)
+        else
+          exe_file=$(find dist/ -name "base-converter-linux-*" -type f | head -1)
+        fi
+        
+        if [ -f "$exe_file" ]; then
+          cp "$exe_file" release-package/
+          echo "✅ Copied executable: $exe_file"
+        else
+          echo "❌ No executable found to copy!"
+          ls -la dist/
+          exit 1
+        fi
         
         # Copy installer scripts
         if [ "${{ matrix.platform }}" = "windows" ]; then
