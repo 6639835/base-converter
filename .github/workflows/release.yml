@@ -11,8 +11,53 @@ on:
         type: string
 
 jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    outputs:
+      release_created: ${{ steps.create_release.outputs.release_created }}
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Create GitHub Release
+      id: create_release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Create release only if it doesn't exist
+        if ! gh release view "${{ github.event.inputs.version }}" >/dev/null 2>&1; then
+          gh release create "${{ github.event.inputs.version }}" \
+            --title "Base Converter v${{ github.event.inputs.version }}" \
+            --notes "Release v${{ github.event.inputs.version }} of Base Converter
+            
+            ## Features
+            - Convert between bases 2-36
+            - Command-line and graphical interfaces  
+            - Arithmetic operations in different bases
+            - Batch processing capabilities
+            - Input validation and error handling
+            
+            ## Installation
+            Download the appropriate package for your platform and follow the installation instructions.
+            
+            ## PyPI Installation
+            \`\`\`bash
+            pip install comprehensive-base-converter
+            \`\`\`
+            
+            For more information, see the [README](https://github.com/6639835/base-converter/blob/main/README.md)." \
+            --draft=false
+          echo "✅ Created GitHub release: ${{ github.event.inputs.version }}"
+          echo "release_created=true" >> $GITHUB_OUTPUT
+        else
+          echo "✅ Release ${{ github.event.inputs.version }} already exists"
+          echo "release_created=false" >> $GITHUB_OUTPUT
+        fi
+
   build-and-upload:
     runs-on: ${{ matrix.os }}
+    needs: [create-release]
+    if: always() && (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && needs.create-release.result == 'success'))
     strategy:
       matrix:
         include:
@@ -169,39 +214,6 @@ jobs:
           tar -czf ${{ matrix.asset_name }} -C release-package .
         fi
         
-    - name: Create GitHub Release (if manual trigger)
-      if: github.event_name == 'workflow_dispatch' && matrix.platform == 'linux'
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        # Create release only if it doesn't exist
-        if ! gh release view "${{ github.event.inputs.version }}" >/dev/null 2>&1; then
-          gh release create "${{ github.event.inputs.version }}" \
-            --title "Base Converter v${{ github.event.inputs.version }}" \
-            --notes "Release v${{ github.event.inputs.version }} of Base Converter
-            
-            ## Features
-            - Convert between bases 2-36
-            - Command-line and graphical interfaces  
-            - Arithmetic operations in different bases
-            - Batch processing capabilities
-            - Input validation and error handling
-            
-            ## Installation
-            Download the appropriate package for your platform and follow the installation instructions.
-            
-            ## PyPI Installation
-            \`\`\`bash
-            pip install comprehensive-base-converter
-            \`\`\`
-            
-            For more information, see the [README](https://github.com/6639835/base-converter/blob/main/README.md)." \
-            --draft=false
-          echo "✅ Created GitHub release: ${{ github.event.inputs.version }}"
-        else
-          echo "✅ Release ${{ github.event.inputs.version }} already exists"
-        fi
-        
     - name: Upload Release Asset
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -211,7 +223,7 @@ jobs:
           --clobber
         
   update-package-managers:
-    needs: build-and-upload
+    needs: [build-and-upload]
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
     
@@ -247,7 +259,7 @@ jobs:
         branch: update-version-${{ github.event.release.tag_name }}
         
   upload-to-pypi:
-    needs: build-and-upload
+    needs: [build-and-upload]
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
     
