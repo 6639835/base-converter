@@ -11,9 +11,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 import pytest
 
-from src.validation import (InputValidator, ValidationError,
-                            clean_number_input, is_valid_base,
-                            is_valid_number_for_base)
+from src.validation import (
+    InputValidator,
+    ValidationError,
+    clean_number_input,
+    is_valid_base,
+    is_valid_number_for_base,
+)
 
 
 class TestInputValidator:
