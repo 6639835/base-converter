@@ -231,6 +231,7 @@ jobs:
     - name: Upload Release Asset
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: bash
       run: |
         gh release upload ${{ github.event.release.tag_name || github.event.inputs.version }} \
           ./${{ matrix.asset_name }} \
