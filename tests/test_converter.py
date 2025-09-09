@@ -11,14 +11,9 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from src.converter import (
-    BaseConverter,
-    batch_convert,
-    quick_binary_to_decimal,
-    quick_decimal_to_binary,
-    quick_decimal_to_hex,
-    quick_hex_to_decimal,
-)
+from src.converter import (BaseConverter, batch_convert,
+                           quick_binary_to_decimal, quick_decimal_to_binary,
+                           quick_decimal_to_hex, quick_hex_to_decimal)
 
 
 class TestBaseConverter:
