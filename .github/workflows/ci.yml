@@ -1,0 +1,129 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
+        exclude:
+          # Exclude some combinations to reduce CI time
+          - os: windows-latest
+            python-version: '3.7'
+          - os: macos-latest
+            python-version: '3.7'
+            
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+        pip install pytest pytest-cov pytest-mock
+        
+    - name: Install GUI dependencies (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-tk xvfb
+        
+    - name: Run tests
+      run: |
+        pytest tests/ -v --cov=src --cov-report=xml --cov-report=term-missing
+      env:
+        # For GUI tests on Linux
+        DISPLAY: ':99.0'
+        
+    - name: Start Xvfb (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+        sleep 3
+        
+    - name: Test CLI functionality
+      run: |
+        python -m src.cli --list-bases
+        python -m src.cli 1010 -f 2 -t 10
+        python -m src.cli FF -f 16 -t 2
+        
+    - name: Test GUI imports (non-headless)
+      if: matrix.os != 'ubuntu-latest'
+      run: |
+        python -c "from src.gui import BaseConverterGUI; print('GUI imports successful')"
+        
+    - name: Upload coverage to Codecov
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: true
+        
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black isort mypy
+        
+    - name: Lint with flake8
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings. GitHub editor is 127 chars wide
+        flake8 src/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        
+    - name: Check code formatting with black
+      run: |
+        black --check src/ tests/
+        
+    - name: Check import sorting with isort
+      run: |
+        isort --check-only src/ tests/
+        
+    - name: Type check with mypy
+      run: |
+        mypy src/ --ignore-missing-imports
+        
+  security:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety bandit
+        
+    - name: Check for security vulnerabilities with safety
+      run: |
+        safety check --json || true  # Don't fail the build, just report
+        
+    - name: Check for security issues with bandit
+      run: |
+        bandit -r src/ -f json || true  # Don't fail the build, just report

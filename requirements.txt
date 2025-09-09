@@ -1,0 +1,4 @@
+pytest>=7.0.0
+pyinstaller>=5.0
+argparse
+tkinter-tooltip>=2.0.0

@@ -1,0 +1,214 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  build-and-upload:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+            asset_name: base-converter-linux-x64.tar.gz
+          - os: windows-latest
+            platform: windows
+            arch: x64
+            asset_name: base-converter-windows-x64.zip
+          - os: macos-latest
+            platform: macos
+            arch: x64
+            asset_name: base-converter-macos-x64.tar.gz
+          - os: macos-13
+            platform: macos
+            arch: arm64
+            asset_name: base-converter-macos-arm64.tar.gz
+            
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install -e .
+        
+    - name: Install system dependencies (Linux)
+      if: matrix.platform == 'linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-tk
+        
+    - name: Build executable
+      run: |
+        python build.py
+        
+    - name: Run comprehensive tests
+      run: |
+        python -m pytest tests/ -v
+        
+    - name: Test executable functionality
+      shell: bash
+      run: |
+        if [ "${{ matrix.platform }}" = "windows" ]; then
+          exe_path="dist/base-converter-windows-x64.exe"
+          "$exe_path" --list-bases
+          "$exe_path" 1010 -f 2 -t 10
+          "$exe_path" FF -f 16 -t 2
+        else
+          exe_path="dist/base-converter-${{ matrix.platform }}-${{ matrix.arch }}"
+          chmod +x "$exe_path"
+          "$exe_path" --list-bases
+          "$exe_path" 1010 -f 2 -t 10
+          "$exe_path" FF -f 16 -t 2
+        fi
+        
+    - name: Create release package
+      shell: bash
+      run: |
+        mkdir -p release-package
+        
+        # Copy executable
+        cp dist/base-converter-* release-package/
+        
+        # Copy installer scripts
+        if [ "${{ matrix.platform }}" = "windows" ]; then
+          cp install-windows.bat release-package/ 2>/dev/null || echo "No Windows installer found"
+        elif [ "${{ matrix.platform }}" = "macos" ]; then
+          cp install-macos.sh release-package/ 2>/dev/null || echo "No macOS installer found"
+        else
+          cp install-linux.sh release-package/ 2>/dev/null || echo "No Linux installer found"
+        fi
+        
+        # Copy documentation
+        cp PACKAGE_INFO.txt release-package/ 2>/dev/null || echo "No package info found"
+        
+        # Create README for the package
+        cat > release-package/README.txt << 'EOF'
+        Base Converter v${{ github.event.inputs.version || github.event.release.tag_name }}
+        ================================================================
+        
+        Thank you for downloading Base Converter!
+        
+        QUICK START:
+        1. Run the installer script (recommended), or
+        2. Copy the executable to a directory in your PATH
+        
+        USAGE:
+        - GUI mode: base-converter --gui
+        - CLI mode: base-converter 1010 -f 2 -t 10
+        - Help: base-converter --help
+        
+        FEATURES:
+        - Convert between bases 2-36
+        - Graphical and command-line interfaces
+        - Arithmetic operations in different bases  
+        - Batch processing from files
+        - Input validation and error handling
+        
+        For detailed documentation and source code:
+        https://github.com/6639835/base-converter
+        
+        Report issues at:
+        https://github.com/6639835/base-converter/issues
+        EOF
+        
+        # Create archive
+        if [ "${{ matrix.platform }}" = "windows" ]; then
+          cd release-package
+          7z a ../${{ matrix.asset_name }} *
+        else
+          tar -czf ${{ matrix.asset_name }} -C release-package .
+        fi
+        
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./${{ matrix.asset_name }}
+        asset_name: ${{ matrix.asset_name }}
+        asset_content_type: ${{ matrix.platform == 'windows' && 'application/zip' || 'application/gzip' }}
+        
+  update-package-managers:
+    needs: build-and-upload
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Update version in files
+      run: |
+        VERSION=${{ github.event.release.tag_name }}
+        VERSION=${VERSION#v}  # Remove 'v' prefix if present
+        
+        # Update setup.py
+        sed -i "s/version=\".*\"/version=\"$VERSION\"/" setup.py
+        
+        # Update pyproject.toml
+        sed -i "s/version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+        
+        # Update __init__.py
+        sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" src/__init__.py
+        
+    - name: Create Pull Request for version updates
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore: update version to ${{ github.event.release.tag_name }}'
+        title: 'chore: update version to ${{ github.event.release.tag_name }}'
+        body: |
+          Automated version update after release.
+          
+          - Updated setup.py
+          - Updated pyproject.toml
+          - Updated src/__init__.py
+        branch: update-version-${{ github.event.release.tag_name }}
+        
+  homebrew-update:
+    needs: build-and-upload
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    
+    steps:
+    - name: Update Homebrew Formula
+      run: |
+        echo "Would update Homebrew formula here"
+        echo "Version: ${{ github.event.release.tag_name }}"
+        echo "This would typically:"
+        echo "1. Fork homebrew-core or create a tap"
+        echo "2. Update the formula with new version and checksums"
+        echo "3. Create a PR to the Homebrew repository"
+        
+  notify-users:
+    needs: [build-and-upload, update-package-managers]
+    runs-on: ubuntu-latest
+    if: always() && github.event_name == 'release'
+    
+    steps:
+    - name: Notify release completion
+      run: |
+        echo "Release ${{ github.event.release.tag_name }} completed successfully!"
+        echo "Assets built for all platforms:"
+        echo "- Linux x64"
+        echo "- Windows x64" 
+        echo "- macOS x64 & ARM64"
+        echo ""
+        echo "Release available at:"
+        echo "${{ github.event.release.html_url }}"
