@@ -32,7 +32,7 @@ class BaseConverterGUI:
 
     def setup_window(self):
         """Configure the main window."""
-        self.root.title("Base Converter v1.0")
+        self.root.title("Base Converter v1.0.1")
         self.root.geometry("800x600")
         self.root.minsize(600, 400)
 
@@ -214,7 +214,7 @@ class BaseConverterGUI:
 
         # Result display with larger font
         self.result_var = tk.StringVar()
-        result_label = ttk.Label(
+        self.result_label = ttk.Label(
             results_frame,
             textvariable=self.result_var,
             font=("Consolas", 14, "bold"),
@@ -222,7 +222,10 @@ class BaseConverterGUI:
             background="lightgray",
             padding="5",
         )
-        result_label.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+        self.result_label.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+        
+        # Add double-click binding for click-to-copy
+        self.result_label.bind("<Double-Button-1>", self.on_result_double_click)
 
         # History text area
         history_label = ttk.Label(results_frame, text="Conversion History:")
@@ -277,10 +280,14 @@ class BaseConverterGUI:
 
         # Copy result on double-click
         self.result_var.trace("w", lambda *args: self.setup_result_click())
+        
+        # Store reference to result label for click binding
+        self.result_label = None
 
     def setup_result_click(self):
         """Setup click-to-copy on result."""
-        # This is called when result changes to setup the click binding
+        # The double-click binding is set up in create_results_section
+        # This method is kept for compatibility with the trace callback
         pass
 
     def on_input_change(self, *args):
@@ -496,6 +503,10 @@ class BaseConverterGUI:
             self.status_var.set("Result copied to clipboard")
         else:
             self.status_var.set("No result to copy")
+    
+    def on_result_double_click(self, event):
+        """Handle double-click on result label to copy result."""
+        self.copy_result()
 
     def save_results(self):
         """Save conversion history to a file."""
@@ -827,7 +838,7 @@ For more information, visit the project repository."""
         """Show about dialog."""
         messagebox.showinfo(
             "About",
-            "Base Converter v1.0\n\n"
+            "Base Converter v1.0.1\n\n"
             "A comprehensive cross-platform base conversion utility\n\n"
             "Features:\n"
             "• Convert between bases 2-36\n"

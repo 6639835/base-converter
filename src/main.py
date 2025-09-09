@@ -54,7 +54,7 @@ def parse_launcher_args(args: Optional[List[str]] = None) -> argparse.Namespace:
 def show_main_help():
     """Show help for the main launcher."""
     help_text = """
-Base Converter v1.0 - A comprehensive cross-platform base conversion utility
+Base Converter v1.0.1 - A comprehensive cross-platform base conversion utility
 
 USAGE:
   base-converter [--gui|--cli] [CLI_OPTIONS...]

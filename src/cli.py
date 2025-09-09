@@ -136,7 +136,7 @@ class BaseConverterCLI:
             help="Suppress all output except the result",
         )
 
-        parser.add_argument("--version", action="version", version="%(prog)s 1.0.0")
+        parser.add_argument("--version", action="version", version="%(prog)s 1.0.1")
 
         return parser
 

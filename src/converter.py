@@ -318,8 +318,7 @@ class BaseConverter:
             # If it uses all octal digits (0-7) or has leading zero pattern, suggest octal
             if (
                 len(unique_digits) >= 4
-                or clean_number.startswith("0")
-                and len(clean_number) > 1
+                or (clean_number.startswith("0") and len(clean_number) > 1)
             ):
                 return 8
             # For simple cases like "123", prefer decimal
@@ -350,7 +349,7 @@ class BaseConverter:
         try:
             back_converted = self.convert_base(converted, target_base, source_base)
             return original.upper().strip() == back_converted.upper().strip()
-        except:
+        except (ValueError, TypeError):
             return False
 
 

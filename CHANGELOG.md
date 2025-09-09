@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2025-09-09
+
+### Fixed
+- **Critical Bug Fixes**
+  - Fixed logic error in base detection where operator precedence caused incorrect detection of numbers starting with "0" (e.g., "0123" always detected as octal instead of considering decimal)
+  - Replaced bare exception handling with specific exception types (ValueError, TypeError) in conversion validation to prevent hiding programming errors and improve debugging
+  - Implemented missing click-to-copy functionality in GUI - users can now double-click the result display to copy the converted number to clipboard
+
+### Technical Details
+- **Base Detection Logic**: Added proper parentheses to fix operator precedence in `detect_base()` method
+- **Exception Handling**: Improved `validate_conversion()` method to catch only relevant exceptions
+- **GUI Enhancement**: Added double-click event binding to result label with proper clipboard integration
+
 ## [1.0.0] - 2025-09-09
 
 ### Added
@@ -126,5 +139,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Code Quality**: Linting and formatting enforcement
 - **Documentation**: Comprehensive documentation and examples
 
-[Unreleased]: https://github.com/6639835/base-converter/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/6639835/base-converter/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/6639835/base-converter/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/6639835/base-converter/releases/tag/v1.0.0

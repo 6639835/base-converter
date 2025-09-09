@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="comprehensive-base-converter",
-    version="1.0.0",
+    version="1.0.1",
     author="Base Converter Team",
     description="A comprehensive cross-platform base converter utility",
     long_description=long_description,
