@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="base-converter",
+    name="comprehensive-base-converter",
     version="1.0.0",
     author="Base Converter Team",
     description="A comprehensive cross-platform base converter utility",
@@ -23,7 +23,7 @@ setup(
     ],
     python_requires=">=3.7",
     install_requires=[
-        "argparse",
+        # No external dependencies required
     ],
     entry_points={
         "console_scripts": [

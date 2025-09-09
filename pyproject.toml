@@ -3,7 +3,7 @@ requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "base-converter"
+name = "comprehensive-base-converter"
 version = "1.0.0"
 description = "A comprehensive cross-platform base converter utility"
 readme = "README.md"

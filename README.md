@@ -52,9 +52,9 @@ cd base-converter
 pip install -e .
 ```
 
-#### Option 3: Install via pip (when available)
+#### Option 3: Install via pip
 ```bash
-pip install base-converter
+pip install comprehensive-base-converter
 ```
 
 ### Basic Usage
