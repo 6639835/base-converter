@@ -223,7 +223,7 @@ class BaseConverterGUI:
             padding="5",
         )
         self.result_label.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
-        
+
         # Add double-click binding for click-to-copy
         self.result_label.bind("<Double-Button-1>", self.on_result_double_click)
 
@@ -280,7 +280,7 @@ class BaseConverterGUI:
 
         # Copy result on double-click
         self.result_var.trace("w", lambda *args: self.setup_result_click())
-        
+
         # Store reference to result label for click binding
         self.result_label = None
 
@@ -503,7 +503,7 @@ class BaseConverterGUI:
             self.status_var.set("Result copied to clipboard")
         else:
             self.status_var.set("No result to copy")
-    
+
     def on_result_double_click(self, event):
         """Handle double-click on result label to copy result."""
         self.copy_result()

@@ -316,9 +316,8 @@ class BaseConverter:
             return 2  # Pure binary
         elif unique_digits.issubset(set("01234567")):
             # If it uses all octal digits (0-7) or has leading zero pattern, suggest octal
-            if (
-                len(unique_digits) >= 4
-                or (clean_number.startswith("0") and len(clean_number) > 1)
+            if len(unique_digits) >= 4 or (
+                clean_number.startswith("0") and len(clean_number) > 1
             ):
                 return 8
             # For simple cases like "123", prefer decimal
