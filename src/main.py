@@ -12,41 +12,41 @@ from typing import List, Optional
 def parse_launcher_args(args: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse arguments to determine which interface to launch."""
     parser = argparse.ArgumentParser(
-        prog='base-converter',
-        description='Base Converter - Choose interface',
-        add_help=False  # We'll handle help differently
+        prog="base-converter",
+        description="Base Converter - Choose interface",
+        add_help=False,  # We'll handle help differently
     )
-    
+
     parser.add_argument(
-        '--gui',
-        action='store_true',
-        help='Launch graphical user interface'
+        "--gui", action="store_true", help="Launch graphical user interface"
     )
-    
+
     parser.add_argument(
-        '--cli',
-        action='store_true', 
-        help='Use command-line interface (default if number provided)'
+        "--cli",
+        action="store_true",
+        help="Use command-line interface (default if number provided)",
     )
-    
-    parser.add_argument(
-        '--help', '-h',
-        action='store_true',
-        help='Show help message'
-    )
-    
+
+    parser.add_argument("--help", "-h", action="store_true", help="Show help message")
+
     # Parse known args to handle cases where CLI args are passed
     known_args, remaining = parser.parse_known_args(args)
-    
+
     # If no interface specified but there are remaining args or a number, use CLI
     if not known_args.gui and not known_args.cli:
-        if remaining or (args and any(arg.lstrip('-').replace('.', '').isdigit() or 
-                                     any(c in arg for c in '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ')
-                                     for arg in args[:1] if not arg.startswith('-'))):
+        if remaining or (
+            args
+            and any(
+                arg.lstrip("-").replace(".", "").isdigit()
+                or any(c in arg for c in "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+                for arg in args[:1]
+                if not arg.startswith("-")
+            )
+        ):
             known_args.cli = True
         else:
             known_args.gui = True
-    
+
     known_args.remaining = remaining
     return known_args
 
@@ -100,18 +100,19 @@ def main(args: Optional[List[str]] = None):
     """Main entry point that launches the appropriate interface."""
     if args is None:
         args = sys.argv[1:]
-    
+
     try:
         launcher_args = parse_launcher_args(args)
-        
+
         if launcher_args.help:
             show_main_help()
             return 0
-        
+
         if launcher_args.gui:
             # Launch GUI
             try:
                 from .gui import main as gui_main
+
                 gui_main()
                 return 0
             except ImportError as e:
@@ -121,12 +122,13 @@ def main(args: Optional[List[str]] = None):
             except Exception as e:
                 print(f"GUI Error: {e}")
                 return 1
-                
+
         elif launcher_args.cli:
             # Launch CLI with remaining arguments
             try:
                 from .cli import main as cli_main
-                sys.argv = ['base-converter'] + launcher_args.remaining
+
+                sys.argv = ["base-converter"] + launcher_args.remaining
                 return cli_main()
             except ImportError as e:
                 print(f"Error: Could not import CLI module: {e}")
@@ -134,12 +136,12 @@ def main(args: Optional[List[str]] = None):
             except Exception as e:
                 print(f"CLI Error: {e}")
                 return 1
-        
+
         else:
             # Default fallback
             show_main_help()
             return 0
-            
+
     except KeyboardInterrupt:
         print("\nOperation cancelled.")
         return 0
@@ -148,5 +150,5 @@ def main(args: Optional[List[str]] = None):
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())
